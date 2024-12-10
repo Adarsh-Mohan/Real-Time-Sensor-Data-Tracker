@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Real-Time Sensor Data Tracker</title>
+  <style>
+    /* General Styling */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(to bottom, #e9f7ef, #fdfdfd);
+      color: #333;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    #login-container {
+      margin: 100px auto;
+      max-width: 400px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #4caf50;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      text-align: left;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    .link-btn {
+      margin-top: 15px;
+      display: inline-block;
+      text-decoration: none;
+      color: #4caf50;
+      font-size: 1rem;
+    }
+
+    .error {
+      color: red;
+      margin: 10px 0;
+    }
+
+    footer {
+      margin-top: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-container">
+    <h1>Login</h1>
+    <form id="login-form">
+      <label for="mobile">Mobile Number</label>
+      <input type="text" id="mobile" name="mobile" placeholder="Enter your mobile number" required>
+      
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Enter your password" required>
+      
+      <p class="error" id="error-message" style="display: none;">Invalid mobile number or password!</p>
+      <button type="submit">Login</button>
+    </form>
+    <a href="signup.html" class="link-btn">Sign Up</a>
+  </div>
+
+  <footer>
+    <p>&copy; 2024 Real-Time Sensor Data Tracker</p>
+  </footer>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const mobile = document.getElementById("mobile").value;
+      const password = document.getElementById("password").value;
+      const errorMessage = document.getElementById("error-message");
+
+      // Test account credentials
+      if (mobile === "1234567890" && password === "123456") {
+        localStorage.setItem("testUserLoggedIn", "true"); // Set test user session
+        alert("Login Successful! (Test User)");
+        window.location.href = "main.html";
+        return;
+      }
+
+      // Retrieve signed-up data from localStorage
+      const signedUpData = JSON.parse(localStorage.getItem("signedUpData"));
+
+      // Validate signed-up user credentials
+      if (signedUpData && signedUpData.mobile === mobile && signedUpData.password === password) {
+        localStorage.removeItem("testUserLoggedIn"); // Clear test user flag if set
+        alert("Login Successful!");
+        window.location.href = "main.html";
+      } else {
+        errorMessage.textContent = "Invalid mobile number or password!";
+        errorMessage.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

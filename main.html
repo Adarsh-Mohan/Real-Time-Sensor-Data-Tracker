@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Sensor Data Tracker</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    /* General Styling */
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(to bottom, #e9f7ef, #fdfdfd);
+      color: #333;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    header {
+      background-color: #4caf50;
+      color: white;
+      padding: 20px 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    #logout-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #logout-btn:hover {
+      background: #e63939;
+    }
+
+    #user-info {
+      margin: 20px auto;
+      padding: 10px;
+      max-width: 400px;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      font-size: 1rem;
+      color: #666;
+    }
+
+    #content {
+      padding: 20px;
+    }
+
+    .status {
+      margin: 20px auto;
+      padding: 10px;
+      max-width: 400px;
+      border-radius: 5px;
+      background: #f9f9f9;
+      font-size: 1rem;
+      color: #666;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #data {
+      margin: 20px auto;
+      max-width: 600px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    #data h2 {
+      margin: 0 0 20px;
+      font-size: 1.5rem;
+      color: #4caf50;
+    }
+
+    .reading {
+      font-size: 1.2rem;
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reading span {
+      font-weight: bold;
+    }
+
+    footer {
+      margin-top: 20px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Real-Time Sensor Data Tracker 🌱</h1>
+    <button id="logout-btn">Logout</button>
+  </header>
+
+  <div id="user-info">
+    <p>Welcome! Mobile Number: <span id="user-mobile">N/A</span></p>
+  </div>
+
+  <div id="content">
+    <div class="status" id="status">Connecting to MQTT broker...</div>
+
+    <div id="data">
+      <h2>Live Sensor Data</h2>
+      <div class="reading">
+        <span>🌡️ Temperature:</span>
+        <span id="temperature">N/A °C</span>
+      </div>
+      <div class="reading">
+        <span>💧 Humidity:</span>
+        <span id="humidity">N/A %</span>
+      </div>
+      <div class="reading">
+        <span>☀️ Sunlight Intensity:</span>
+        <span id="sunlight">N/A %</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Powered by MQTT and IoT 🌐</p>
+  </footer>
+
+  <script>
+    // Fetch user data
+    const userMobileElement = document.getElementById("user-mobile");
+    const signedUpData = JSON.parse(localStorage.getItem("signedUpData"));
+    const isTestUser = localStorage.getItem("testUserLoggedIn") === "true";
+
+    // Determine which user is logged in
+    if (isTestUser) {
+      userMobileElement.textContent = "1234567890"; // Test user mobile number
+    } else if (signedUpData && signedUpData.mobile) {
+      userMobileElement.textContent = signedUpData.mobile; // Signed-up user's mobile number
+    } else {
+      // Only redirect if no user is logged in
+      window.location.href = "index.html";
+    }
+
+    // Logout button functionality
+    document.getElementById("logout-btn").addEventListener("click", function () {
+      // Only clear the test user session flag, not the signed-up data
+      localStorage.removeItem("testUserLoggedIn");
+      alert("Logged out successfully!");
+      window.location.href = "index.html"; // Redirect to Login Page
+    });
+
+    // MQTT Client Setup
+    const brokerUrl = "wss://broker.emqx.io:8084/mqtt";
+    const topic = "sensor/dht22_ldr";
+
+    const tempElement = document.getElementById("temperature");
+    const humidityElement = document.getElementById("humidity");
+    const sunlightElement = document.getElementById("sunlight");
+    const statusElement = document.getElementById("status");
+
+    let client;
+    let isConnected = false;
+
+    // Connect to MQTT broker
+    function connectToBroker() {
+      client = mqtt.connect(brokerUrl);
+
+      client.on("connect", () => {
+        isConnected = true;
+        statusElement.textContent = "Connected to MQTT broker";
+        client.subscribe(topic, (err) => {
+          if (err) console.error("Subscription error:", err);
+        });
+      });
+
+      client.on("message", (topic, message) => {
+        try {
+          const data = JSON.parse(message.toString());
+          updateData(data);
+        } catch (error) {
+          console.error("Invalid message received:", error);
+        }
+      });
+
+      client.on("error", (error) => {
+        console.error("MQTT Client Error:", error);
+        statusElement.textContent = "Connection error. Retrying...";
+        setTimeout(connectToBroker, 5000); // Reconnect after 5 seconds
+      });
+
+      client.on("disconnect", () => {
+        isConnected = false;
+        statusElement.textContent = "Disconnected. Reconnecting...";
+        setTimeout(connectToBroker, 5000);
+      });
+    }
+
+    // Update UI with sensor data
+    function updateData(data) {
+      const { temperature, humidity, sunlightIntensity } = data;
+
+      tempElement.textContent = `${temperature.toFixed(1)} °C`;
+      humidityElement.textContent = `${humidity.toFixed(1)} %`;
+      sunlightElement.textContent = `${sunlightIntensity.toFixed(1)} %`;
+    }
+
+    // Initial connection to MQTT broker
+    connectToBroker();
+  </script>
+</body>
+</html>
